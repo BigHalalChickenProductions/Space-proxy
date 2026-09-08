@@ -2,30 +2,22 @@
 // & is the name of the proxy page, so &.js is the js for the proxy page minus the actual proxy code, because thats long enough to cause readability issues
 
 let encodedUrl = '';
-
 async function executeSearch(query) {
 	encodedUrl = swConfigSettings.prefix + __uv$config.encodeUrl(search(query));
 	localStorage.setItem('input', query);
 	localStorage.setItem('output', encodedUrl);
-
 	document.querySelectorAll('.spinnerParent')[0].style.display = 'block';
 	document.querySelectorAll('.spinner')[0].style.display = 'block';
 	document.getElementById('gointospace').style.display = 'none';
-
 	const iframe = document.getElementById('intospace');
-
 	await registerSW();
-
 	iframe.src = encodedUrl;
-
 	await registerSW().then(async () => {
 		await setTransports();
-
 		setTimeout(() => {
 			iframe.src = iframe.src;
 		}, 100);
 	});
-
 	iframe.style.display = 'block';
 
 	if (iframe.src) {
@@ -35,27 +27,20 @@ async function executeSearch(query) {
 
 	document.querySelectorAll('input').forEach(input => input.blur());
 
-	// Make check for UV error
+	// make check for uv error
 	iframe.addEventListener('load', function () {
-		try {
-			const iframeDocument =
-				iframe.contentDocument || iframe.contentWindow.document;
-
-			const errorList = iframeDocument.querySelectorAll('ul li');
-
-			if (
-				errorList &&
-				Array.from(errorList).some(
-					li =>
-						li.textContent.trim() ===
-						'Checking your internet connection'
-				)
-			) {
-				iframe.src = '/500';
-				return;
-			}
-		} catch (e) {
-			console.log('Could not inspect iframe document:', e);
+		const iframeDocument =
+			iframe.contentDocument || iframe.contentWindow.document;
+		const errorList = iframeDocument.querySelectorAll('ul li');
+		if (
+			errorList &&
+			Array.from(errorList).some(
+				li =>
+					li.textContent.trim() ===
+					'Checking your internet connection'
+			)
+		) {
+			iframe.src = '/500';
 		}
 
 		startURLMonitoring();
@@ -77,32 +62,16 @@ function saveHistory() {
 
 function startURLMonitoring() {
 	const iframe = document.getElementById('intospace');
-
-	if (!iframe || !iframe.contentWindow) {
-		return;
-	}
-
 	let lastUrl = iframe.contentWindow.location.href;
 
 	const checkIframeURL = () => {
 		try {
 			const currentUrl = iframe.contentWindow.location.href;
-
-			// Ignore the iframe's initial blank page.
-			if (
-				currentUrl === 'about:blank' ||
-				currentUrl === 'about:srcdoc'
-			) {
-				lastUrl = currentUrl;
-				return;
-			}
-
 			if (currentUrl !== lastUrl) {
 				lastUrl = currentUrl;
 
 				if (historyArray[currentIndex] !== currentUrl) {
-					// If the user navigates while in history,
-					// clear the history after the current position.
+					// if the user navigates while in history, it clears the history after
 					historyArray = historyArray.slice(0, currentIndex + 1);
 					historyArray.push(currentUrl);
 					currentIndex++;
@@ -112,14 +81,13 @@ function startURLMonitoring() {
 				devToggle = false;
 				erudaScriptLoaded = false;
 				erudaScriptInjecting = false;
-
 				console.log('Iframe navigation detected, Eruda toggle reset.');
 
 				updateGointospace2(currentUrl);
 				updateButtonStates();
 			}
 		} catch (e) {
-			console.log('Error getting iframe URL:', e);
+			console.log('Error getting iframe url:', e);
 		}
 	};
 
@@ -127,36 +95,16 @@ function startURLMonitoring() {
 }
 
 function updateGointospace2(url) {
-	// Ignore empty or browser-internal URLs.
+	// Ignore the iframe's initial blank page.
 	if (!url || url === 'about:blank' || url === 'about:srcdoc') {
-		return;
-	}
-
-	// Only decode URLs that actually belong to the UV proxy.
-	if (!url.includes(swConfigSettings.prefix)) {
 		return;
 	}
 
 	document.querySelectorAll('.search-header__icon')[0].style.display = 'none';
 
-	let encodedPart = url.split(swConfigSettings.prefix).pop();
-
-	if (!encodedPart) {
-		return;
-	}
-
-	let cleanedUrl;
-
-	try {
-		cleanedUrl = __uv$config.decodeUrl(encodedPart);
-	} catch (e) {
-		console.warn('Could not decode iframe URL:', url, e);
-		return;
-	}
-
-	if (!cleanedUrl || cleanedUrl === 'about:blank') {
-		return;
-	}
+	let cleanedUrl = __uv$config.decodeUrl(
+		url.split(swConfigSettings.prefix).pop()
+	);
 
 	let isSecure = cleanedUrl.startsWith('https://');
 
@@ -164,21 +112,13 @@ function updateGointospace2(url) {
 
 	if (cleanedUrl === 'a`owt8bnalk') {
 		address2.value = 'Loading...';
+	} else if (__uv$config.decodeUrl(cleanedUrl).endsWith('/500')) {
+		address2.value = 'Internal Server Error! Did you load a broken link?';
 	} else {
-		try {
-			if (__uv$config.decodeUrl(cleanedUrl).endsWith('/500')) {
-				address2.value =
-					'Internal Server Error! Did you load a broken link?';
-			} else {
-				address2.value = cleanedUrl;
-			}
-		} catch (e) {
-			address2.value = cleanedUrl;
-		}
+		address2.value = cleanedUrl;
 	}
 
 	let webSecurityIcon = document.querySelector('.webSecurityIcon');
-
 	if (isSecure) {
 		webSecurityIcon.id = 'secure';
 		webSecurityIcon.innerHTML =
@@ -200,28 +140,13 @@ address2.addEventListener('click', function () {
 		currentValue != 'Internal Server Error! Did you load a broken link?' &&
 		currentValue != 'Loading...'
 	) {
-		let isSecure = false;
-
-		try {
-			const currentIframeUrl = iframe.contentWindow.location.href;
-
-			if (
-				currentIframeUrl &&
-				currentIframeUrl !== 'about:blank' &&
-				currentIframeUrl.includes(swConfigSettings.prefix)
-			) {
-				isSecure = __uv$config
-					.decodeUrl(
-						currentIframeUrl
-							.split(swConfigSettings.prefix)
-							.pop()
-					)
-					.startsWith('https://');
-			}
-		} catch (e) {
-			console.log('Could not determine iframe security:', e);
-		}
-
+		let isSecure = __uv$config
+			.decodeUrl(
+				iframe.contentWindow.location.href
+					.split(swConfigSettings.prefix)
+					.pop()
+			)
+			.startsWith('https://');
 		if (isSecure) {
 			this.value = 'https://' + currentValue;
 		} else {
@@ -292,11 +217,9 @@ backButton.addEventListener('click', function () {
 		currentIndex--;
 		iframe.src = historyArray[currentIndex];
 		iframe.style.display = 'block';
-
 		setTimeout(() => {
 			document.getElementById('gointospace2').style.paddingLeft = '40px';
 		}, 250);
-
 		updateButtonStates();
 		saveHistory();
 	}
@@ -307,11 +230,9 @@ forwardButton.addEventListener('click', function () {
 		currentIndex++;
 		iframe.src = historyArray[currentIndex];
 		iframe.style.display = 'block';
-
 		setTimeout(() => {
 			document.getElementById('gointospace2').style.paddingLeft = '40px';
 		}, 250);
-
 		updateButtonStates();
 		saveHistory();
 	}
@@ -338,7 +259,6 @@ function updateButtonStates() {
 async function registerSW() {
 	if ('serviceWorker' in navigator) {
 		await setTransports();
-
 		await navigator.serviceWorker
 			.register(swFile, { scope: swConfigSettings.prefix })
 			.catch(error => {
@@ -347,7 +267,7 @@ async function registerSW() {
 	}
 }
 
-// Register event listeners
+// register event listeners for shit
 if (address1) {
 	address1.addEventListener('keydown', function (event) {
 		if (event.key === 'Enter') {
@@ -385,27 +305,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
 				if (
 					gData.some(
-						d =>
-							d.name.toLowerCase() ===
-							queryParam.toLowerCase()
+						d => d.name.toLowerCase() === queryParam.toLowerCase()
 					)
 				) {
 					data = gData;
 					source = 'g';
 				} else if (
 					aData.some(
-						d =>
-							d.name.toLowerCase() ===
-							queryParam.toLowerCase()
+						d => d.name.toLowerCase() === queryParam.toLowerCase()
 					)
 				) {
 					data = aData;
 					source = 'a';
 				} else if (
 					shortcutsData.some(
-						d =>
-							d.name.toLowerCase() ===
-							queryParam.toLowerCase()
+						d => d.name.toLowerCase() === queryParam.toLowerCase()
 					)
 				) {
 					data = shortcutsData;
@@ -413,9 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				}
 
 				const item = data.find(
-					d =>
-						d.name.toLowerCase() ===
-						queryParam.toLowerCase()
+					d => d.name.toLowerCase() === queryParam.toLowerCase()
 				);
 
 				if (item) {
@@ -435,8 +347,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			.catch(error => console.error('Error fetching json:', error));
 
 		document.querySelector('.utilityBar').style.display = 'block';
-		document.getElementById('intospace').style.height =
-			'calc(100% - 3.633em)';
+		document.getElementById('intospace').style.height = 'calc(100% - 3.633em)';
 		document.getElementById('intospace').style.top = '3.633em';
 	} else {
 		if (localStorage.getItem('utilBarHidden') === 'true') {
@@ -451,16 +362,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		document.querySelector('.pPage').id = 'navactive';
 	}
 
-	// Only start monitoring after the DOM is ready.
 	startURLMonitoring();
 	updateButtonStates();
 
 	if (localStorage.getItem('smallIcons') === 'false') {
-		switch (
-			localStorage.getItem(
-				'dropdown-selected-text-searchEngine'
-			)
-		) {
+		switch (localStorage.getItem('dropdown-selected-text-searchEngine')) {
 			case 'Duck Duck Go':
 				document.querySelector('.searchEngineIcon').src =
 					'/assets/imgs/b/ddg.webp';
@@ -509,25 +415,8 @@ const observer = new MutationObserver(function (mutationsList) {
 			iframe.addEventListener(
 				'load',
 				function () {
-					try {
-						const initialUrl =
-							iframe.contentWindow.location.href;
-
-						if (
-							initialUrl &&
-							initialUrl !== 'about:blank' &&
-							initialUrl !== 'about:srcdoc' &&
-							initialUrl.includes(swConfigSettings.prefix)
-						) {
-							updateGointospace2(initialUrl);
-						}
-					} catch (e) {
-						console.log(
-							'Could not read iframe URL after load:',
-							e
-						);
-					}
-
+					const initialUrl = iframe.contentWindow.location.href;
+					updateGointospace2(initialUrl);
 					startURLMonitoring();
 				},
 				{ once: true }
@@ -606,7 +495,6 @@ function injectShowScript(iframeDocument) {
 function injectHideScript(iframeDocument) {
 	return new Promise(resolve => {
 		const script = iframeDocument.createElement('script');
-
 		script.type = 'text/javascript';
 
 		script.textContent = `
@@ -638,7 +526,7 @@ function inspectelement() {
 		'a`owt8bnalk'
 	];
 
-	if (forbiddenSrcs.some(src => iframe.contentWindow.location.href === src)) {
+	if (iframe.contentWindow.location.href.includes(forbiddenSrcs)) {
 		console.warn('Iframe src is forbidden, skipping.');
 		return;
 	}
